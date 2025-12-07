@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AniTrackers – Farmer Console</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <!-- Leaflet.draw CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
+  />
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-logo">
+        <img src="anitrackers-logo.png" alt="AniTrackers logo" />
+      </div>
+      <div class="brand-text">
+        <div class="brand-title">AniTrackers</div>
+        <div class="brand-subtitle">Track. Detect. Protect.</div>
+      </div>
+    </div>
+    <div class="user-info">
+      <span class="pill" id="header-user-email">Not signed in</span>
+      <button id="logout-button" style="display:none;">Log out</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- AUTH PANEL -->
+    <section id="auth-panel">
+      <div class="auth-card">
+        <div class="auth-inner">
+          <h2>Sign In to Your Ranch Console</h2>
+          <p>Monitor your herd, geofences, and alerts from a secure AniTrackers dashboard.</p>
+
+          <div class="field">
+            <label for="email-input">Email</label>
+            <input
+              type="email"
+              id="email-input"
+              placeholder="farmer@example.com"
+              autocomplete="email"
+            />
+          </div>
+
+          <div class="field">
+            <label for="password-input">Password</label>
+            <div class="password-wrapper">
+              <input
+                type="password"
+                id="password-input"
+                placeholder="••••••••"
+                autocomplete="current-password"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                id="password-toggle"
+                aria-label="Show password"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button class="button-primary" id="signin-button">Sign in</button>
+          <button class="button-secondary" id="signup-button">
+            Create account (dev only)
+          </button>
+
+          <div class="auth-status fading-status" id="auth-status"></div>
+
+          <div class="auth-contact">
+            <div class="auth-contact-title">Need Help?</div>
+            <div class="auth-contact-row">
+              <div class="auth-contact-label">Email</div>
+              <div>
+                <a href="mailto:lyndon@anitrackers.com">lyndon@anitrackers.com</a>
+              </div>
+            </div>
+            <div class="auth-contact-row" style="margin-top:0.4rem;">
+              <div class="auth-contact-label">Phone</div>
+              <div>
+                <a href="tel:+14053156444">+1 (405) 315-6444</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- APP PANEL -->
+    <section id="app-panel">
+      <aside id="sidebar">
+        <!-- Alerts -->
+        <div class="section-block">
+          <div class="section-header">
+            <div class="section-title">Alerts</div>
+            <span class="badge pill-danger" id="alert-count-pill">0</span>
+          </div>
+          <div id="alerts-list" class="alerts-list">No alerts yet.</div>
+        </div>
+
+        <!-- Filters -->
+        <div class="section-block">
+          <div class="section-header">
+            <div class="section-title">Filters</div>
+          </div>
+
+          <!-- Search + battery filter -->
+          <div class="filters-row">
+            <input
+              type="text"
+              id="search-input"
+              placeholder="Search by name or tag…"
+            />
+            <select id="battery-filter">
+              <option value="all">Battery: All</option>
+              <option value="good">Good</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+
+          <!-- NEW: Details category filter (for docs attributes) -->
+          <div class="filters-row">
+            <select id="details-category-filter">
+              <option value="all">All details categories</option>
+              <!-- JS will populate with actual docs categories -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Add animal -->
+        <div class="section-block">
+          <div class="section-header">
+            <div
+              class="section-title"
+              id="add-animal-toggle"
+              style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;"
+            >
+              <span>Add animal</span>
+              <span id="add-animal-toggle-icon">+</span>
+            </div>
+          </div>
+
+          <div id="add-animal-body" style="display:none;">
+            <div class="field" style="margin-bottom:0.5rem;">
+              <label for="new-animal-name">Name/Number</label>
+              <input
+                type="text"
+                id="new-animal-name"
+                placeholder="e.g. Heifer 404, Steer 505, Bull 606"
+              />
+            </div>
+
+            <div class="field" style="margin-bottom:0.5rem;">
+              <label for="new-animal-tag">Tag ID</label>
+              <input
+                type="text"
+                id="new-animal-tag"
+                placeholder="e.g. TAG004"
+              />
+            </div>
+
+            <div class="field" style="margin-bottom:0.5rem;">
+              <span class="auth-contact-label">Type</span>
+              <div class="radio-row">
+                <label>
+                  <input
+                    type="radio"
+                    name="new-animal-type"
+                    id="new-animal-type-heifer"
+                    value="heifer"
+                    checked
+                  />
+                  Heifer
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="new-animal-type"
+                    id="new-animal-type-steer"
+                    value="steer"
+                  />
+                  Steer
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="new-animal-type"
+                    id="new-animal-type-bull"
+                    value="bull"
+                  />
+                  Bull
+                </label>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:0.4rem;align-items:center;">
+              <button class="small-button" id="add-animal-button" style="flex:1;">
+                Add to herd
+              </button>
+            </div>
+            <div class="auth-status fading-status" id="add-animal-status"></div>
+          </div>
+        </div>
+
+        <!-- Herd -->
+        <div class="section-block">
+          <div class="section-header">
+            <div class="section-title">Herd overview</div>
+            <span class="badge pill-success" id="herd-count-pill">0 active</span>
+          </div>
+          <div id="cow-list" class="list">Loading…</div>
+        </div>
+
+        <!-- Geofences -->
+        <div class="section-block">
+          <div class="section-header">
+            <div class="section-title">Geofences</div>
+            <button class="small-button" id="start-draw-geofence-btn">
+              Draw pasture
+            </button>
+          </div>
+          <div id="geofences-list" class="geofences-list">
+            No geofences yet.
+          </div>
+        </div>
+
+        <!-- Reports -->
+        <div class="section-block">
+          <div class="section-header">
+            <div
+              class="section-title"
+              id="reports-toggle"
+              style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;"
+            >
+              <span>Reports</span>
+              <span id="reports-toggle-icon">+</span>
+            </div>
+          </div>
+
+          <div id="reports-body" style="display:none;">
+            <button class="small-button report-button" id="docs-pdf-button">
+              Documentation PDF
+            </button>
+            <div class="auth-status fading-status" id="docs-pdf-status"></div>
+
+            <button class="small-button report-button" id="docs-excel-button">
+              Documentation Excel
+            </button>
+            <div class="auth-status fading-status" id="docs-excel-status"></div>
+
+            <button class="small-button report-button" id="shot-pdf-button">
+              Shot Record PDF
+            </button>
+            <div class="auth-status fading-status" id="shot-pdf-status"></div>
+
+            <button class="small-button report-button" id="shot-excel-button">
+              Shot Record Excel
+            </button>
+            <div class="auth-status fading-status" id="shot-excel-status"></div>
+          </div>
+        </div>
+
+        <!-- Support -->
+        <div class="section-block">
+          <div class="section-header">
+            <div class="section-title">Support</div>
+          </div>
+          <div class="support-contact">
+            <div
+              style="
+                font-weight:600;
+                color:var(--accent-soft);
+                margin-bottom:0.3rem;
+              "
+            >
+              Contact AniTrackers Support
+            </div>
+            <div>
+              Email:
+              <a href="mailto:lyndon@anitrackers.com">lyndon@anitrackers.com</a>
+            </div>
+            <div>
+              Phone:
+              <a href="tel:+14053156444">+1 (405) 315-6444</a>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <section id="map"></section>
+    </section>
+  </main>
+
+  <!-- Documentation Modal (per-animal Details) -->
+  <div id="docs-modal" class="docs-modal">
+    <div class="docs-modal-card">
+      <div class="docs-modal-header">
+        <div>
+          <div class="docs-modal-title" id="docs-modal-title">Documentation</div>
+          <div class="docs-modal-subtitle" id="docs-modal-subtitle"></div>
+        </div>
+        <button
+          class="docs-close-btn"
+          id="docs-close-btn"
+          aria-label="Close documentation"
+        >
+          ×
+        </button>
+      </div>
+
+      <div class="docs-modal-body">
+        <div class="docs-status fading-status" id="docs-status"></div>
+
+        <table class="docs-table">
+          <thead>
+            <tr>
+              <th class="docs-field-label-cell">Attribute</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="docs-table-body"></tbody>
+        </table>
+
+        <div
+          style="
+            font-size:0.78rem;
+            color:var(--text-muted);
+            margin-bottom:0.25rem;
+          "
+        >
+          Add more categories:
+        </div>
+        <div class="docs-add-list" id="docs-add-list"></div>
+
+        <!-- Parents section -->
+        <div class="docs-family" id="docs-parents-section">
+          <div class="docs-family-header">Parents</div>
+          <div id="docs-parents-list">No parents linked yet.</div>
+          <div class="docs-family-add">
+            <select id="docs-parents-cow-select">
+              <option value="">Select cow…</option>
+            </select>
+            <select id="docs-parents-type-select">
+              <option value="mother">Mother</option>
+              <option value="father">Father</option>
+            </select>
+            <button class="small-button" id="docs-parents-add-button">Link</button>
+          </div>
+          <div class="docs-family-note" style="margin-bottom:0.9rem;">
+            Link each parent separately.
+          </div>
+        </div>
+
+        <!-- Calves / Fathered section -->
+        <div class="docs-family" id="docs-calves-section" style="display:none;">
+          <div class="docs-family-header" id="docs-calves-header">Calves</div>
+          <div id="docs-calves-list">No calves linked yet.</div>
+          <div class="docs-family-add">
+            <select id="docs-calves-calf-select">
+              <option value="">Select calf…</option>
+            </select>
+            <button class="small-button" id="docs-calves-add-button">Link</button>
+          </div>
+          <div class="docs-family-note" style="margin-bottom:0.9rem;">
+            Link each calf separately.
+          </div>
+        </div>
+      </div>
+
+      <div class="docs-modal-footer">
+        <div class="docs-modal-footer-left">
+          <button class="small-button" id="docs-rename-animal-button">
+            Rename animal
+          </button>
+          <button class="small-button-danger" id="docs-delete-animal-button">
+            Delete animal
+          </button>
+        </div>
+        <button class="small-button" id="docs-save-button">
+          Save documentation
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW: Export Categories Modal (for Documentation PDF/Excel) -->
+  <div id="export-modal" class="docs-modal">
+    <div class="docs-modal-card">
+      <div class="docs-modal-header">
+        <div>
+          <div class="docs-modal-title" id="export-modal-title">
+            Export documentation
+          </div>
+          <div class="docs-modal-subtitle" id="export-modal-subtitle">
+            Choose which documentation categories to include.
+          </div>
+        </div>
+        <button
+          class="docs-close-btn"
+          id="export-close-btn"
+          aria-label="Close export options"
+        >
+          ×
+        </button>
+      </div>
+
+      <div class="docs-modal-body">
+        <div class="docs-status fading-status" id="export-status"></div>
+
+        <!-- Checkboxes for each docs category -->
+        <div class="export-fields-grid" id="export-fields-list">
+          <!-- JS will populate one checkbox per category from DOC_FIELDS -->
+        </div>
+      </div>
+
+      <div class="docs-modal-footer">
+        <button class="small-button" id="export-cancel-btn">
+          Cancel
+        </button>
+        <button class="small-button" id="export-download-btn">
+          Download
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase JS client -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <!-- Leaflet.draw JS -->
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+  <!-- jsPDF for Documentation PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Your app code -->
+  <script src="app.js"></script>
+</body>
+</html>
